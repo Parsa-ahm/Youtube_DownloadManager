@@ -25,6 +25,9 @@ avutil-*.dll
 swresample-*.dll
 swscale-*.dll
 
+# Accidental nested clone
+Youtube_DownloadManager/
+
 # IDE / OS
 .idea/
 .vscode/
