@@ -6,7 +6,7 @@ A standalone Windows app to download YouTube videos and playlists as **MP3**, **
 
 ## Download
 
-**[→ Get the latest release](https://github.com/YOUR_USERNAME/Youtube_DownloadManager/releases)** — Download `YTDownloader.exe`, run it, done. No install needed.
+**[→ Get the latest release](https://github.com/Parsa-ahm/Youtube_DownloadManager/releases)** — Download `YTDownloader.exe`, run it, done. No install needed.
 
 ## How to Use
 
