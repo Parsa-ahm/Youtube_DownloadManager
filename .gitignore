@@ -1,0 +1,33 @@
+# PyInstaller
+build/
+dist/
+*.spec
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+env/
+
+# Binaries (download separately - see README)
+yt-dlp.exe
+ffmpeg.exe
+ffprobe.exe
+avcodec-*.dll
+avdevice-*.dll
+avfilter-*.dll
+avformat-*.dll
+avutil-*.dll
+swresample-*.dll
+swscale-*.dll
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
