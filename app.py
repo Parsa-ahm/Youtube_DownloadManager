@@ -32,6 +32,10 @@ class App(tk.Tk):
         self.output_dir = os.path.expanduser("~/Downloads")
         self.dl_proc = None
         self._stopped_by_user = False
+        try:
+            self.iconbitmap(resource_path('icon.ico'))
+        except Exception:
+            pass
         self._build_ui()
 
     def _build_ui(self):
@@ -39,11 +43,17 @@ class App(tk.Tk):
         hdr = tk.Frame(self, bg=BG)
         hdr.pack(fill="x", padx=30, pady=(28, 0))
 
-        # Red rounded rectangle with white play triangle
-        logo = tk.Canvas(hdr, width=42, height=30, bg=BG, highlightthickness=0)
-        logo.pack(side="left")
-        logo.create_rectangle(2, 2, 40, 28, fill=ACCENT, outline="")
-        logo.create_polygon(16, 8, 16, 22, 32, 15, fill="white", outline="")
+        # Logo from assets/logo.png (falls back to drawn canvas if missing)
+        try:
+            raw = tk.PhotoImage(file=resource_path(os.path.join('assets', 'logo.png')))
+            factor = max(1, raw.width() // 56)
+            self._logo_photo = raw.subsample(factor, factor)
+            tk.Label(hdr, image=self._logo_photo, bg=BG).pack(side="left")
+        except Exception:
+            logo = tk.Canvas(hdr, width=42, height=30, bg=BG, highlightthickness=0)
+            logo.pack(side="left")
+            logo.create_rectangle(2, 2, 40, 28, fill=ACCENT, outline="")
+            logo.create_polygon(16, 8, 16, 22, 32, 15, fill="white", outline="")
 
         tk.Label(hdr, text="YouTube",    font=(FONT, 22, "bold"), fg=TEXT,  bg=BG).pack(side="left", padx=(8, 0))
         tk.Label(hdr, text="Downloader", font=(FONT, 22),          fg=TEXT,  bg=BG).pack(side="left", padx=(4, 0))

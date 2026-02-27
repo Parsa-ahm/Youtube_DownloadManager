@@ -31,6 +31,7 @@ pyinstaller --onefile --windowed --name "YTDownloader" ^
     --add-binary "swresample-6.dll;." ^
     --add-binary "swscale-9.dll;." ^
     --icon icon.ico ^
+    --add-data "assets;assets" ^
     app.py
 
 echo.

@@ -47,6 +47,7 @@ jobs:
             "--onefile", "--windowed",
             "--name",    "YTDownloader",
             "--icon",    "icon.ico",
+            "--add-data", "assets;assets",
             "--add-binary", "yt-dlp.exe;.",
             "--add-binary", "ffmpeg.exe;.",
             "--add-binary", "ffprobe.exe;."
