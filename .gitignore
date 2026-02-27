@@ -1,7 +1,6 @@
 # PyInstaller
 build/
 dist/
-*.spec
 
 # Python
 __pycache__/
@@ -24,6 +23,8 @@ avformat-*.dll
 avutil-*.dll
 swresample-*.dll
 swscale-*.dll
+ffmpeg.zip
+ffmpeg_extracted/
 
 # Accidental nested clone
 Youtube_DownloadManager/
