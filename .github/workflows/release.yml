@@ -8,6 +8,7 @@ on:
 jobs:
   build:
     runs-on: windows-latest
+
     steps:
       - uses: actions/checkout@v4
 
@@ -16,35 +17,56 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
       - name: Download yt-dlp
         run: |
-          Invoke-WebRequest -Uri "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe" -OutFile "yt-dlp.exe" -UseBasicParsing
+          Invoke-WebRequest `
+            -Uri "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe" `
+            -OutFile "yt-dlp.exe" -UseBasicParsing
 
-      - name: Download FFmpeg
+      - name: Download and extract FFmpeg
         run: |
-          Invoke-WebRequest -Uri "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-n8.0-latest-win64-gpl-shared-8.0.zip" -OutFile "ffmpeg.zip" -UseBasicParsing
+          Invoke-WebRequest `
+            -Uri "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-n8.0-latest-win64-gpl-shared-8.0.zip" `
+            -OutFile "ffmpeg.zip" -UseBasicParsing
           Expand-Archive -Path ffmpeg.zip -DestinationPath ffmpeg_extracted
-          $binPath = (Get-ChildItem -Path ffmpeg_extracted -Recurse -Filter "ffmpeg.exe" | Select-Object -First 1).DirectoryName
+          $binPath = (Get-ChildItem -Path ffmpeg_extracted -Recurse -Filter "ffmpeg.exe" |
+                      Select-Object -First 1).DirectoryName
           Copy-Item "$binPath\ffmpeg.exe", "$binPath\ffprobe.exe" -Destination .
           Copy-Item "$binPath\*.dll" -Destination .
 
-      - name: Install PyInstaller
-        run: pip install pyinstaller
-
       - name: Build EXE
         run: |
-          pyinstaller --onefile --windowed --name "YTDownloader" `
-            --add-binary "yt-dlp.exe;." `
-            --add-binary "ffmpeg.exe;." `
-            --add-binary "ffprobe.exe;." `
-            --add-binary "avcodec-62.dll;." `
-            --add-binary "avdevice-62.dll;." `
-            --add-binary "avfilter-11.dll;." `
-            --add-binary "avformat-62.dll;." `
-            --add-binary "avutil-60.dll;." `
-            --add-binary "swresample-6.dll;." `
-            --add-binary "swscale-9.dll;." `
-            app.py
+          # Discover every .dll copied into the workspace and build --add-binary flags
+          $dllFlags = Get-ChildItem -Path . -Filter "*.dll" |
+                      ForEach-Object { "--add-binary"; "$($_.Name);." }
+
+          $pyArgs = @(
+            "--onefile", "--windowed",
+            "--name",    "YTDownloader",
+            "--icon",    "icon.ico",
+            "--add-binary", "yt-dlp.exe;.",
+            "--add-binary", "ffmpeg.exe;.",
+            "--add-binary", "ffprobe.exe;."
+          ) + $dllFlags + @("app.py")
+
+          Write-Host "pyinstaller $pyArgs"
+          & pyinstaller @pyArgs
+
+      - name: Verify EXE was produced
+        run: |
+          if (-not (Test-Path "dist\YTDownloader.exe")) {
+            Write-Error "dist\YTDownloader.exe not found — build failed"
+            exit 1
+          }
+          $size = (Get-Item "dist\YTDownloader.exe").Length
+          Write-Host "EXE size: $size bytes"
+          if ($size -lt 1MB) {
+            Write-Error "EXE is suspiciously small ($size bytes)"
+            exit 1
+          }
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
@@ -52,10 +74,12 @@ jobs:
           files: dist/YTDownloader.exe
           generate_release_notes: true
           body: |
-            Standalone Windows app to download YouTube videos and playlists as MP3, WAV, MP4, or WebM.
+            Standalone Windows app — download YouTube videos and playlists as MP3, WAV, MP4, or WebM.
 
-            **Credits:**
-            - [yt-dlp](https://github.com/yt-dlp/yt-dlp/releases) - Video extraction
-            - [FFmpeg](https://ffmpeg.org/download.html) - Audio/video conversion
+            **No install needed.** Download `YTDownloader.exe`, run it, done.
+
+            **Bundled:**
+            - [yt-dlp](https://github.com/yt-dlp/yt-dlp) — video/audio extraction
+            - [FFmpeg](https://ffmpeg.org) — audio/video conversion
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

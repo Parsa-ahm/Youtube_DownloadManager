@@ -2,7 +2,8 @@
 
 A standalone Windows app to download YouTube videos and playlists as **MP3**, **WAV**, **MP4**, or **WebM**. Paste a URL, pick a format, click Download.
 
-![Platform](https://img.shields.io/badge/Platform-Windows-lightgrey)
+[![Latest Release](https://img.shields.io/github/v/release/Parsa-ahm/Youtube_DownloadManager?style=flat-square&color=00e5ff)](https://github.com/Parsa-ahm/Youtube_DownloadManager/releases/latest)
+![Platform](https://img.shields.io/badge/Platform-Windows-lightgrey?style=flat-square)
 
 ## Download
 
