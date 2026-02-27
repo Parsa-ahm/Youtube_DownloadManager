@@ -25,6 +25,8 @@ class App(tk.Tk):
         self.resizable(False, False)
         self.configure(bg=BG)
         self.output_dir = os.path.expanduser("~/Downloads")
+        self.dl_proc = None
+        self._stopped_by_user = False
         self._build_ui()
 
     def _build_ui(self):
@@ -47,6 +49,22 @@ class App(tk.Tk):
                  bg=CARD, fg=TEXT, insertbackground=ACCENT, relief="flat",
                  bd=10).pack(fill="x")
 
+        # Single vs Playlist toggle
+        self._label("Download", pady=(18,6))
+        mode_frame = tk.Frame(self, bg=BG)
+        mode_frame.pack(fill="x", padx=30)
+        self.playlist_var = tk.BooleanVar(value=False)
+        tk.Radiobutton(mode_frame, variable=self.playlist_var, value=False,
+                       text="Single video", bg=BG, fg=TEXT, selectcolor=BG,
+                       activebackground=BG, activeforeground=ACCENT,
+                       font=("Courier New", 10), relief="flat", cursor="hand2",
+                       indicatoron=False).pack(side="left", padx=(0, 16))
+        tk.Radiobutton(mode_frame, variable=self.playlist_var, value=True,
+                       text="Playlist", bg=BG, fg=TEXT, selectcolor=BG,
+                       activebackground=BG, activeforeground=ACCENT,
+                       font=("Courier New", 10), relief="flat", cursor="hand2",
+                       indicatoron=False).pack(side="left")
+
         # Format
         self._label("Output Format", pady=(18,6))
         fmt_frame = tk.Frame(self, bg=BG)
@@ -68,11 +86,18 @@ class App(tk.Tk):
                   relief="flat", cursor="hand2", bd=0, padx=8,
                   command=self._browse).pack(side="right")
 
-        # Download button
-        self.dl_btn = tk.Button(self, text="⬇  DOWNLOAD", font=("Courier New", 13, "bold"),
+        # Download / Stop buttons
+        btn_frame = tk.Frame(self, bg=BG)
+        btn_frame.pack(fill="x", padx=30, pady=(24, 0))
+        self.dl_btn = tk.Button(btn_frame, text="⬇  DOWNLOAD", font=("Courier New", 13, "bold"),
                                  bg=ACCENT, fg="#000", relief="flat", cursor="hand2",
                                  bd=0, pady=12, command=self._start)
-        self.dl_btn.pack(fill="x", padx=30, pady=(24, 0))
+        self.dl_btn.pack(side="left", fill="x", expand=True)
+        self.stop_btn = tk.Button(btn_frame, text="⏹  STOP", font=("Courier New", 13, "bold"),
+                                   bg=ERROR, fg="#fff", relief="flat", cursor="hand2",
+                                   bd=0, pady=12, padx=20, command=self._stop,
+                                   state="disabled")
+        self.stop_btn.pack(side="right")
 
         # Log box
         log_frame = tk.Frame(self, bg=CARD, highlightbackground="#222", highlightthickness=1)
@@ -116,45 +141,60 @@ class App(tk.Tk):
         if not url:
             messagebox.showerror("Error", "Please paste a URL first.")
             return
-        self.dl_btn.config(state="disabled", text="Downloading...")
+        self._stopped_by_user = False
+        self.dl_btn.config(state="disabled")
+        self.stop_btn.config(state="normal")
         self.log.config(state="normal")
         self.log.delete("1.0", "end")
         self.log.config(state="disabled")
         threading.Thread(target=self._download, args=(url,), daemon=True).start()
+
+    def _stop(self):
+        if self.dl_proc and self.dl_proc.poll() is None:
+            self._stopped_by_user = True
+            subprocess.call(
+                ['taskkill', '/F', '/T', '/PID', str(self.dl_proc.pid)],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+            )
+            self.after(0, self._log, "\n⏹ Stopped by user.")
 
     def _download(self, url):
         fmt = self.fmt_var.get()
         yt_dlp = resource_path("yt-dlp.exe")
         ffmpeg_dir = resource_path(".")
 
+        base_opts = ["--ffmpeg-location", ffmpeg_dir,
+                     "-o", os.path.join(self.output_dir, "%(title)s.%(ext)s")]
+        if not self.playlist_var.get():
+            base_opts.insert(0, "--no-playlist")
         if fmt in ("mp3", "wav"):
-            cmd = [yt_dlp, "-x", "--audio-format", fmt,
-                   "--ffmpeg-location", ffmpeg_dir,
-                   "-o", os.path.join(self.output_dir, "%(title)s.%(ext)s"),
-                   url]
+            cmd = [yt_dlp, "-x", "--audio-format", fmt] + base_opts + [url]
         else:
             cmd = [yt_dlp, "-f", "bestvideo+bestaudio",
-                   "--merge-output-format", fmt,
-                   "--ffmpeg-location", ffmpeg_dir,
-                   "-o", os.path.join(self.output_dir, "%(title)s.%(ext)s"),
-                   url]
+                   "--merge-output-format", fmt] + base_opts + [url]
 
         try:
             proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                     text=True, bufsize=1)
+            self.dl_proc = proc
             for line in proc.stdout:
                 line = line.rstrip()
                 if line:
                     self.after(0, self._log, line)
             proc.wait()
-            if proc.returncode == 0:
+            if self._stopped_by_user:
+                pass
+            elif proc.returncode == 0:
                 self.after(0, self._log, "\n✅ Done! Files saved to: " + self.output_dir)
             else:
                 self.after(0, self._log, "\n❌ Something went wrong. Check the log above.")
         except FileNotFoundError:
             self.after(0, self._log, "❌ yt-dlp.exe not found next to this app!")
         finally:
-            self.after(0, lambda: self.dl_btn.config(state="normal", text="⬇  DOWNLOAD"))
+            self.dl_proc = None
+            self._stopped_by_user = False
+            self.after(0, lambda: (self.dl_btn.config(state="normal"),
+                                   self.stop_btn.config(state="disabled")))
 
 if __name__ == "__main__":
     app = App()
